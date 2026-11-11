@@ -248,7 +248,8 @@ function otherFifths(f, maxAcc, n = 3) {
 }
 
 export function keysQuestion(opts) {
-  const key = pickKey(keysPool(opts));
+  // opts.fixed = { f, minor } fuerza una tonalidad concreta (solo para "construye la escala")
+  const key = opts.fixed ? `kb:${opts.fixed.f}:${opts.fixed.minor ? 'm' : 'M'}` : pickKey(keysPool(opts));
   const [type, fs, m] = key.split(':');
   const f = Number(fs), minor = m === 'm';
   const name = T.keyName(f, minor);

@@ -185,6 +185,33 @@ function practice(host, rerender) {
   const go = (title, types) => () => runSession(host, {
     title, next: () => keysQuestion({ ...opts, types }), onExit: rerender, onCleanup: micOff,
   });
+  // "Construye la escala" tiene sus propios ajustes: modo y tónica
+  const build = { minor: store.pref('keys.build.minor', false), tonic: store.pref('keys.build.tonic', 'rand') };
+  const tonicSel = h('select', {
+    class: 'select', 'aria-label': 'Tónica',
+    onchange: (ev) => { build.tonic = ev.target.value === 'rand' ? 'rand' : Number(ev.target.value); store.setPref('keys.build.tonic', build.tonic); },
+  });
+  function fillTonics() {
+    const order = [0, 1, 2, 3, 4, 5, 6, 7, -1, -2, -3, -4, -5, -6, -7];
+    tonicSel.replaceChildren(
+      h('option', { value: 'rand', selected: build.tonic === 'rand' }, 'Aleatoria (según dificultad)'),
+      ...order.map((f) => h('option', { value: f, selected: build.tonic === f }, `${T.noteName(T.keyTonic(f, build.minor))} · ${T.sigShort(f)}`)));
+  }
+  fillTonics();
+  const buildControls = h('div', { class: 'ex-controls' },
+    field('Tonalidad', segmented([{ value: false, label: 'Mayor' }, { value: true, label: 'Menor' }], build.minor,
+      (v) => { build.minor = v; store.setPref('keys.build.minor', v); fillTonics(); })),
+    field('Nota inicial (tónica)', tonicSel));
+  const startBuild = () => {
+    const fixed = build.tonic === 'rand' ? null : { f: build.tonic, minor: build.minor };
+    runSession(host, {
+      title: `Construye la escala · ${build.minor ? 'menor' : 'mayor'}`,
+      count: fixed ? 1 : 10,
+      next: () => keysQuestion({ ...opts, mode: build.minor ? 'minor' : 'major', types: ['kb'], fixed }),
+      onExit: rerender, onCleanup: micOff,
+    });
+  };
+
   host.replaceChildren(
     h('div', { class: 'card' },
       h('p', { class: 'eyebrow' }, 'Ajusta el terreno'),
@@ -199,7 +226,7 @@ function practice(host, rerender) {
     h('div', { class: 'ex-grid' },
       exerciseCard('Armaduras', 'Ves la armadura y dices la tonalidad — y al revés.', 'Empezar', go('Armaduras', ['ks', 'kc'])),
       exerciseCard('Relativos', 'Cada mayor tiene una menor que comparte sus notas. ¿Cuál?', 'Empezar', go('Relativos', ['kr'])),
-      exerciseCard('Construye la escala', 'Siete letras en fila. Tú decides cuáles llevan ♯ o ♭.', 'Empezar', go('Construye la escala', ['kb'])),
+      exerciseCard('Construye la escala', 'Siete letras en fila. Tú decides cuáles llevan ♯ o ♭. Elige el modo y, si quieres, una nota inicial concreta.', 'Empezar', startBuild, 'wide', buildControls),
       exerciseCard('Acordes de la tonalidad', '¿Qué acorde es el grado V de La mayor? ¿Y el II?', 'Empezar', go('Acordes de la tonalidad', ['kd'])),
       exerciseCard('Mezcla', 'Un poco de todo, insistiendo en lo que más te cuesta.', 'Empezar', go('Tonalidades · mezcla', KEY_TYPES), 'mix')),
   );
