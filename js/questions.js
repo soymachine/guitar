@@ -357,7 +357,7 @@ export function chordQuestion(opts) {
   const formula = tones.map((d) => d.degLabel).join(' – ');
   const base = 45 + T.mod(T.pcOf(root) - 9, 12);
   return {
-    key: `ch:${opts.minor ? 'm' : 'M'}${opts.seventh ? '7' : ''}${opts.flat5 ? 'b5' : ''}`, midi: null, hold: true,
+    key: `ch:${opts.minor ? 'm' : 'M'}${opts.seventh === 'maj7' ? 'maj7' : opts.seventh ? '7' : ''}${opts.flat5 ? 'b5' : ''}`, midi: null, hold: true,
     prompt: `Construye el acorde ${b(name)} <span class="q-hint">las letras van por terceras: sube o baja cada una con ♯ y ♭</span>`,
     mount(body, answer) {
       const chosen = tones.map((d, i) => (i === 0 ? d.note.a : 0));
@@ -415,7 +415,7 @@ export function chordScaleQuestion(opts) {
   const title = `${T.noteName(root)} ${name}`;
   const base = 45 + T.mod(T.pcOf(root) - 9, 12);
   return {
-    key: `cs:${opts.minor ? 'm' : 'M'}${opts.seventh ? '7' : ''}${opts.flat5 ? 'b5' : ''}`, midi: null, hold: true,
+    key: `cs:${opts.minor ? 'm' : 'M'}${opts.seventh === 'maj7' ? 'maj7' : opts.seventh ? '7' : ''}${opts.flat5 ? 'b5' : ''}`, midi: null, hold: true,
     prompt: `Construye la escala de ${b(title)} <span class="q-hint">la escala del acorde ${chord} · cada letra aparece una vez: súbela o bájala con ♯ y ♭</span>`,
     mount(body, answer) {
       const chosen = tones.map((d, i) => (i === 0 ? d.note.a : 0));
