@@ -405,6 +405,63 @@ export function chordQuestion(opts) {
   };
 }
 
+// ---------- Construir la escala de un acorde ----------
+/** opts: { root: {l,a} | null (aleatoria), minor, seventh, flat5 } */
+export function chordScaleQuestion(opts) {
+  const root = opts.root || T.pick(COMMON_ROOTS);
+  const { name, tones, pattern } = T.chordScale(root, opts);
+  const chord = T.chordName(root, opts);
+  const chordPcs = new Set(T.spellChord(root, opts).map((d) => T.pcOf(d.note)));
+  const title = `${T.noteName(root)} ${name}`;
+  const base = 45 + T.mod(T.pcOf(root) - 9, 12);
+  return {
+    key: `cs:${opts.minor ? 'm' : 'M'}${opts.seventh ? '7' : ''}${opts.flat5 ? 'b5' : ''}`, midi: null, hold: true,
+    prompt: `Construye la escala de ${b(title)} <span class="q-hint">la escala del acorde ${chord} · cada letra aparece una vez: súbela o bájala con ♯ y ♭</span>`,
+    mount(body, answer) {
+      const chosen = tones.map((d, i) => (i === 0 ? d.note.a : 0));
+      const cols = tones.map((d, i) => {
+        const label = h('div', { class: 'build-note' }, T.noteName(T.N(d.note.l, chosen[i])));
+        const step = (delta) => () => {
+          chosen[i] = Math.max(-2, Math.min(2, chosen[i] + delta));
+          label.textContent = T.noteName(T.N(d.note.l, chosen[i]));
+        };
+        const ctrl = i === 0 ? h('div', { class: 'build-fixed' }, 'tónica')
+          : h('div', { class: 'stepper' },
+            h('button', { type: 'button', class: 'step-btn', 'aria-label': `Bajar ${T.letterName(d.note.l)} un semitono`, onclick: step(-1) }, '♭'),
+            h('button', { type: 'button', class: 'step-btn', 'aria-label': `Subir ${T.letterName(d.note.l)} un semitono`, onclick: step(1) }, '♯'));
+        return h('div', { class: 'build-col' }, h('div', { class: 'build-deg' }, d.deg), label, ctrl);
+      });
+      const fb = createFretboard({ onPick: (s, f) => playMidi(T.midiAt(s, f)) });
+      const fbBox = h('div', { class: 'fb-scroll', hidden: true }, fb.el);
+      const check = h('button', {
+        class: 'btn', type: 'button',
+        onclick: () => {
+          check.disabled = true;
+          let ok = true;
+          tones.forEach((d, i) => {
+            const good = chosen[i] === d.note.a;
+            if (!good) ok = false;
+            cols[i].classList.add(good ? 'ok' : 'ko');
+            cols[i].querySelectorAll('button').forEach((x) => (x.disabled = true));
+            cols[i].querySelector('.build-deg').textContent = d.degLabel;
+          });
+          const byPc = new Map(tones.map((d) => [T.pcOf(d.note), d]));
+          const marks = [];
+          for (let s = 0; s < 6; s++) for (let f = 0; f <= T.FRETS; f++) {
+            const d = byPc.get(T.midiAt(s, f) % 12);
+            if (d) marks.push({ s, f, label: T.noteName(d.note), cls: d.semis === 0 ? 'root' : chordPcs.has(T.pcOf(d.note)) ? 'tone' : 'tone alt' });
+          }
+          fb.mark(marks);
+          fbBox.hidden = false;
+          [...tones.map((d) => d.semis), 12].forEach((sm, i) => playMidi(base + sm, 0.25 + i * 0.2, 0.8));
+          answer(ok, `${b(title)}: ${tones.map((d) => T.noteName(d.note)).join(' ')}. Fórmula: ${pattern.map(T.stepLabel).join(' – ')} <span class="q-hint">Grados ${tones.map((d) => d.degLabel).join(' ')} · en claro, las notas del acorde ${chord}</span>`);
+        },
+      }, 'Comprobar');
+      body.append(h('div', { class: 'build scale-build' }, cols), h('div', { class: 'build-actions' }, check), fbBox);
+    },
+  };
+}
+
 // ---------- Sesión mixta ----------
 export function mixedQuestion() {
   const fb = { strings: [0, 1, 2, 3, 4, 5], maxFret: 12, naturals: false };

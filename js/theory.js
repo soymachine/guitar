@@ -166,6 +166,26 @@ export function spellChord(root, { minor, seventh, flat5 }) {
   });
 }
 
+// Escala que corresponde a un acorde (mismas opciones que spellChord)
+export function chordScale(root, { minor, seventh, flat5 }) {
+  let semis, name;
+  if (minor) {
+    // La menor natural ya lleva ♭7; con ♭5 pasa a ser la locria (la del acorde m7♭5)
+    semis = flat5 ? [0, 1, 3, 5, 6, 8, 10] : [0, 2, 3, 5, 7, 8, 10];
+    name = flat5 ? 'locria' : 'menor natural';
+  } else {
+    semis = [0, 2, 4, 5, flat5 ? 6 : 7, 9, seventh ? 10 : 11];
+    name = (seventh ? 'mixolidia' : 'mayor') + (flat5 ? ' ♭5' : '');
+  }
+  const rpc = pcOf(root);
+  const tones = semis.map((sm, i) => {
+    const l = mod(root.l + i, 7), diff = sm - MAJOR_REF[i + 1];
+    return { note: N(l, normAcc(rpc + sm - LETTER_PC[l])), semis: sm, deg: i + 1, degLabel: (diff < 0 ? '♭' : diff > 0 ? '♯' : '') + (i + 1) };
+  });
+  const pattern = semis.concat(12).slice(1).map((v, i) => v - semis[i]);
+  return { name, tones, pattern };
+}
+
 // Las 12 posiciones del círculo de quintas (quintas de la armadura)
 export const CIRCLE = [0, 1, 2, 3, 4, 5, 6, -5, -4, -3, -2, -1];
 
