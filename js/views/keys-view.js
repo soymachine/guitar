@@ -208,13 +208,13 @@ function practice(host, rerender) {
         h('option', { value: 'rand', selected: st.letter === 'rand' }, 'Aleatoria'))),
       field('♯ / ♭', accSeg),
       field('Tipo', segmented([{ value: false, label: 'Mayor' }, { value: true, label: 'Menor' }], st.minor, set('minor'))),
-      field('Séptima', segmented([{ value: false, label: 'No' }, { value: true, label: '7' }], st.seventh, set('seventh'))),
+      field('Séptima', segmented([{ value: false, label: 'No' }, { value: true, label: '7' }, { value: 'maj7', label: 'maj7' }], st.seventh, set('seventh'))),
       field('Quinta', segmented([{ value: false, label: 'Justa' }, { value: true, label: '♭5' }], st.flat5, set('flat5'))),
       field(prefix === 'scale' ? 'Tu escala' : 'Tu acorde', preview));
     draw();
     return { el, st, root: () => (st.letter === 'rand' ? null : T.N(st.letter, st.acc)) };
   }
-  const suffix = (o) => (o.minor ? 'm' : '') + (o.seventh ? '7' : '') + (o.flat5 ? '♭5' : '');
+  const suffix = (o) => T.chordSuffix(o);
 
   const sc = chordPicker('scale', (root, o) => {
     const name = T.chordScale(T.N(0), o).name;
@@ -257,8 +257,8 @@ function practice(host, rerender) {
     h('div', { class: 'ex-grid' },
       exerciseCard('Armaduras', 'Ves la armadura y dices la tonalidad — y al revés.', 'Empezar', go('Armaduras', ['ks', 'kc'])),
       exerciseCard('Relativos', 'Cada mayor tiene una menor que comparte sus notas. ¿Cuál?', 'Empezar', go('Relativos', ['kr'])),
-      exerciseCard('Construye la escala', 'Elige la nota inicial, si lleva ♯ o ♭, mayor o menor, con séptima (7) o sin ella y con ♭5 o no. Después decides la alteración de cada una de las siete letras.', 'Empezar', startBuild, 'wide', sc.el),
-      exerciseCard('Construye el acorde', 'Elige la nota, si lleva ♯ o ♭, mayor o menor, con séptima o sin ella y con ♭5 o no. Después deletrea sus notas y míralo en el mástil.', 'Empezar', startChord, 'wide', chp.el),
+      exerciseCard('Construye la escala', 'Elige la nota inicial, si lleva ♯ o ♭, mayor o menor, sin séptima, con 7 o con maj7, y con ♭5 o no. Después decides la alteración de cada una de las siete letras.', 'Empezar', startBuild, 'wide', sc.el),
+      exerciseCard('Construye el acorde', 'Elige la nota, si lleva ♯ o ♭, mayor o menor, sin séptima, con 7 o con maj7, y con ♭5 o no. Después deletrea sus notas y míralo en el mástil.', 'Empezar', startChord, 'wide', chp.el),
       exerciseCard('Acordes de la tonalidad', '¿Qué acorde es el grado V de La mayor? ¿Y el II?', 'Empezar', go('Acordes de la tonalidad', ['kd'])),
       exerciseCard('Mezcla', 'Un poco de todo, insistiendo en lo que más te cuesta.', 'Empezar', go('Tonalidades · mezcla', KEY_TYPES), 'mix')),
   );

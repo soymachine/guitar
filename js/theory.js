@@ -148,8 +148,13 @@ export function diatonicChords(tonic, scaleId) {
 export const QUALITY_NAME = { maj: 'mayor', min: 'menor', dim: 'disminuido', aug: 'aumentado' };
 
 // Acordes sueltos: tríada mayor/menor, con séptima (♭7) y/o quinta disminuida (♭5) opcionales
+// seventh: false (sin séptima) | true (séptima menor, "7") | 'maj7' (séptima mayor)
+export function chordSuffix({ minor, seventh, flat5 }) {
+  const sev = seventh === 'maj7' ? (minor ? '(maj7)' : 'maj7') : seventh ? '7' : '';
+  return (minor ? 'm' : '') + sev + (flat5 ? '♭5' : '');
+}
 export function chordName(root, { minor, seventh, flat5 }) {
-  return noteName(root) + (minor ? 'm' : '') + (seventh ? '7' : '') + (flat5 ? '♭5' : '');
+  return noteName(root) + chordSuffix({ minor, seventh, flat5 });
 }
 /** Devuelve [{note, semis, degLabel, role}] apilando terceras desde la fundamental */
 export function spellChord(root, { minor, seventh, flat5 }) {
@@ -158,7 +163,8 @@ export function spellChord(root, { minor, seventh, flat5 }) {
     [2, minor ? 3 : 4, minor ? '♭3' : '3', minor ? '3ª menor' : '3ª mayor'],
     [4, flat5 ? 6 : 7, flat5 ? '♭5' : '5', flat5 ? '5ª disminuida' : '5ª justa'],
   ];
-  if (seventh) tones.push([6, 10, '♭7', '7ª menor']);
+  if (seventh === 'maj7') tones.push([6, 11, '7', '7ª mayor']);
+  else if (seventh) tones.push([6, 10, '♭7', '7ª menor']);
   const rpc = pcOf(root);
   return tones.map(([dl, semis, degLabel, role]) => {
     const l = mod(root.l + dl, 7);
@@ -169,13 +175,17 @@ export function spellChord(root, { minor, seventh, flat5 }) {
 // Escala que corresponde a un acorde (mismas opciones que spellChord)
 export function chordScale(root, { minor, seventh, flat5 }) {
   let semis, name;
+  const maj7 = seventh === 'maj7';
   if (minor) {
-    // La menor natural ya lleva ♭7; con ♭5 pasa a ser la locria (la del acorde m7♭5)
-    semis = flat5 ? [0, 1, 3, 5, 6, 8, 10] : [0, 2, 3, 5, 7, 8, 10];
-    name = flat5 ? 'locria' : 'menor natural';
+    // La menor natural ya lleva ♭7. Con maj7 hace falta la sensible: menor armónica.
+    // Con ♭5 (y sin maj7) es la locria, la del acorde m7♭5.
+    if (maj7) { semis = [0, 2, 3, 5, flat5 ? 6 : 7, 8, 11]; name = 'menor armónica' + (flat5 ? ' ♭5' : ''); }
+    else if (flat5) { semis = [0, 1, 3, 5, 6, 8, 10]; name = 'locria'; }
+    else { semis = [0, 2, 3, 5, 7, 8, 10]; name = 'menor natural'; }
   } else {
-    semis = [0, 2, 4, 5, flat5 ? 6 : 7, 9, seventh ? 10 : 11];
-    name = (seventh ? 'mixolidia' : 'mayor') + (flat5 ? ' ♭5' : '');
+    const dom = seventh && !maj7;
+    semis = [0, 2, 4, 5, flat5 ? 6 : 7, 9, dom ? 10 : 11];
+    name = (dom ? 'mixolidia' : 'mayor') + (flat5 ? ' ♭5' : '');
   }
   const rpc = pcOf(root);
   const tones = semis.map((sm, i) => {
