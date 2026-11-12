@@ -291,6 +291,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .build.chord-build { grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 560px; }
 .build.chord-build.n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 420px; }
 .chord-build .build-note { font-size: 1.7rem; min-height: 2.2rem; }
+.build-select { padding: .3rem .4rem; font-size: .8rem; width: 100%; max-width: 6.6rem; border-radius: 10px; }
+.build-chord { font: 500 .95rem var(--display); min-height: 1.5rem; }
+.build-chord.given { color: var(--amber); padding: .3rem 0; }
+.build-chord.ok { color: var(--teal); } .build-chord.ko { color: var(--coral); }
+.build.scale-build { max-width: 900px; }
 .scale-build .step-btn { width: 2.1rem; height: 2.1rem; font-size: 1rem; }
 .scale-build .stepper { gap: .2rem; }
 .stepper { display: flex; gap: .3rem; }
