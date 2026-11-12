@@ -147,6 +147,25 @@ export function diatonicChords(tonic, scaleId) {
 }
 export const QUALITY_NAME = { maj: 'mayor', min: 'menor', dim: 'disminuido', aug: 'aumentado' };
 
+// Acordes sueltos: tríada mayor/menor, con séptima (♭7) y/o quinta disminuida (♭5) opcionales
+export function chordName(root, { minor, seventh, flat5 }) {
+  return noteName(root) + (minor ? 'm' : '') + (seventh ? '7' : '') + (flat5 ? '♭5' : '');
+}
+/** Devuelve [{note, semis, degLabel, role}] apilando terceras desde la fundamental */
+export function spellChord(root, { minor, seventh, flat5 }) {
+  const tones = [
+    [0, 0, '1', 'fundamental'],
+    [2, minor ? 3 : 4, minor ? '♭3' : '3', minor ? '3ª menor' : '3ª mayor'],
+    [4, flat5 ? 6 : 7, flat5 ? '♭5' : '5', flat5 ? '5ª disminuida' : '5ª justa'],
+  ];
+  if (seventh) tones.push([6, 10, '♭7', '7ª menor']);
+  const rpc = pcOf(root);
+  return tones.map(([dl, semis, degLabel, role]) => {
+    const l = mod(root.l + dl, 7);
+    return { note: N(l, normAcc(rpc + semis - LETTER_PC[l])), semis, degLabel, role };
+  });
+}
+
 // Las 12 posiciones del círculo de quintas (quintas de la armadura)
 export const CIRCLE = [0, 1, 2, 3, 4, 5, 6, -5, -4, -3, -2, -1];
 
