@@ -288,6 +288,16 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .build-fixed { font-size: .72rem; color: var(--amber); padding: .42rem 0; text-transform: uppercase; letter-spacing: .1em; }
 .build .seg { flex-wrap: nowrap; }
 .build .seg-btn { padding: .3rem .5rem; }
+.build.chord-build { grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 560px; }
+.build.chord-build.n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 420px; }
+.chord-build .build-note { font-size: 1.7rem; min-height: 2.2rem; }
+.stepper { display: flex; gap: .3rem; }
+.step-btn { width: 2.5rem; height: 2.5rem; border-radius: 50%; border: 1px solid var(--line); background: var(--card-2); font-size: 1.15rem; line-height: 1; transition: background .12s, transform .1s; }
+.step-btn:hover:not(:disabled) { background: var(--cream); color: var(--ink); }
+.step-btn:active:not(:disabled) { transform: scale(.92); }
+.step-btn:disabled { opacity: .4; cursor: default; }
+.chord-preview { font: italic 500 1.7rem/1.35 var(--display); color: var(--amber); min-width: 5ch; }
+.seg.disabled { opacity: .35; pointer-events: none; }
 .build-col.ok { border-color: var(--teal); } .build-col.ok .build-note { color: var(--teal); }
 .build-col.ko { border-color: var(--coral); } .build-col.ko .build-note { color: var(--coral); }
 

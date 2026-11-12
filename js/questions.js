@@ -347,6 +347,64 @@ export function keysQuestion(opts) {
   };
 }
 
+// ---------- Construir un acorde ----------
+const COMMON_ROOTS = [T.N(0), T.N(1, -1), T.N(1), T.N(2, -1), T.N(2), T.N(3), T.N(3, 1), T.N(4), T.N(4, -1), T.N(5), T.N(6, -1), T.N(6)];
+/** opts: { root: {l,a} | null (aleatoria), minor, seventh, flat5 } */
+export function chordQuestion(opts) {
+  const root = opts.root || T.pick(COMMON_ROOTS);
+  const tones = T.spellChord(root, opts);
+  const name = T.chordName(root, opts);
+  const formula = tones.map((d) => d.degLabel).join(' – ');
+  const base = 45 + T.mod(T.pcOf(root) - 9, 12);
+  return {
+    key: `ch:${opts.minor ? 'm' : 'M'}${opts.seventh ? '7' : ''}${opts.flat5 ? 'b5' : ''}`, midi: null, hold: true,
+    prompt: `Construye el acorde ${b(name)} <span class="q-hint">las letras van por terceras: sube o baja cada una con ♯ y ♭</span>`,
+    mount(body, answer) {
+      const chosen = tones.map((d, i) => (i === 0 ? d.note.a : 0));
+      const cols = tones.map((d, i) => {
+        const label = h('div', { class: 'build-note' }, T.noteName(T.N(d.note.l, chosen[i])));
+        const step = (delta) => () => {
+          chosen[i] = Math.max(-2, Math.min(2, chosen[i] + delta));
+          label.textContent = T.noteName(T.N(d.note.l, chosen[i]));
+        };
+        const ctrl = i === 0 ? h('div', { class: 'build-fixed' }, 'fundamental')
+          : h('div', { class: 'stepper' },
+            h('button', { type: 'button', class: 'step-btn', 'aria-label': `Bajar ${T.letterName(d.note.l)} un semitono`, onclick: step(-1) }, '♭'),
+            h('button', { type: 'button', class: 'step-btn', 'aria-label': `Subir ${T.letterName(d.note.l)} un semitono`, onclick: step(1) }, '♯'));
+        return h('div', { class: 'build-col' }, h('div', { class: 'build-deg' }, ['1', '3ª', '5ª', '7ª'][i]), label, ctrl);
+      });
+      const fb = createFretboard({ onPick: (s, f) => playMidi(T.midiAt(s, f)) });
+      const fbBox = h('div', { class: 'fb-scroll', hidden: true }, fb.el);
+      const check = h('button', {
+        class: 'btn', type: 'button',
+        onclick: () => {
+          check.disabled = true;
+          let ok = true;
+          tones.forEach((d, i) => {
+            const good = chosen[i] === d.note.a;
+            if (!good) ok = false;
+            cols[i].classList.add(good ? 'ok' : 'ko');
+            cols[i].querySelectorAll('button').forEach((x) => (x.disabled = true));
+            cols[i].querySelector('.build-deg').textContent = d.degLabel;
+          });
+          const byPc = new Map(tones.map((d) => [T.pcOf(d.note), d]));
+          const marks = [];
+          for (let s = 0; s < 6; s++) for (let f = 0; f <= T.FRETS; f++) {
+            const d = byPc.get(T.midiAt(s, f) % 12);
+            if (d) marks.push({ s, f, label: T.noteName(d.note), cls: d.semis === 0 ? 'root' : 'tone' });
+          }
+          fb.mark(marks);
+          fbBox.hidden = false;
+          tones.forEach((d, i) => playMidi(base + d.semis, 0.25 + i * 0.16, 0.8));
+          tones.forEach((d, i) => playMidi(base + d.semis, 1.1 + i * 0.03, 0.6));
+          answer(ok, `${b(name)}: ${tones.map((d) => T.noteName(d.note)).join(' ')}. Fórmula: ${formula} <span class="q-hint">${tones.slice(1).map((d) => d.role).join(' · ')}</span>`);
+        },
+      }, 'Comprobar');
+      body.append(h('div', { class: `build chord-build n${tones.length}` }, cols), h('div', { class: 'build-actions' }, check), fbBox);
+    },
+  };
+}
+
 // ---------- Sesión mixta ----------
 export function mixedQuestion() {
   const fb = { strings: [0, 1, 2, 3, 4, 5], maxFret: 12, naturals: false };

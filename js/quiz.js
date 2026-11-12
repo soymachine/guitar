@@ -81,7 +81,7 @@ export function runSession(host, opts) {
           h('strong', {}, ok ? '¡Bien!' : 'No del todo.'), ' ',
           h('span', { html: explain || '' })),
         h('button', { class: 'btn', type: 'button', onclick: go }, index + 1 >= count ? 'Ver resumen' : 'Siguiente →'));
-      if (ok) timer = setTimeout(go, 1300);
+      if (ok && !q.hold) timer = setTimeout(go, 1300); // hold: deja la respuesta en pantalla
     });
     startedAt = performance.now();
   }
