@@ -236,7 +236,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* ---------- Ejercicios ---------- */
 .ex-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.1rem; }
-.ex-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.4rem; display: grid; gap: .7rem; align-content: start; grid-template-rows: auto 1fr auto; }
+.ex-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.4rem; display: flex; flex-direction: column; gap: .7rem; }
+.ex-card > p { flex: 1; }
+.ex-card .btn { align-self: flex-start; }
+.ex-card.wide { grid-column: span 2; }
+.ex-controls { display: flex; flex-wrap: wrap; gap: .8rem 1.4rem; margin: .2rem 0 .4rem; }
+.ex-controls .select { max-width: 100%; }
 .ex-card p { color: var(--muted); font-size: .94rem; }
 .ex-card .btn { justify-self: start; }
 .ex-card.mic { border-style: dashed; border-color: #6b5136; }
@@ -318,6 +323,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .chord-row { grid-template-columns: repeat(4, 1fr); }
   .build { grid-template-columns: repeat(4, 1fr); }
   .session-title { display: none; }
+  .ex-card.wide { grid-column: auto; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }

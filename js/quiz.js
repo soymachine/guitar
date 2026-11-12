@@ -106,7 +106,7 @@ export function runSession(host, opts) {
       misses.length ? h('div', { class: 'summary-misses' }, h('p', { class: 'eyebrow' }, 'Para repasar'),
         h('ul', {}, misses.map((m) => h('li', { html: m.explain })))) : null,
       h('div', { class: 'summary-actions' },
-        h('button', { class: 'btn', type: 'button', onclick: () => { runSession(host, opts); } }, 'Otra ronda'),
+        h('button', { class: 'btn', type: 'button', onclick: () => { runSession(host, opts); } }, count === 1 ? 'Repetir' : 'Otra ronda'),
         h('button', { class: 'btn-ghost', type: 'button', onclick: exit }, 'Volver'))));
   }
 

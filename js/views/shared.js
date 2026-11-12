@@ -23,8 +23,8 @@ export function tabs(view, { kicker, title, lede, prefKey, explorer, practice })
   render();
 }
 
-export function exerciseCard(title, text, cta, onStart, cls = '') {
+export function exerciseCard(title, text, cta, onStart, cls = '', controls = null) {
   return h('article', { class: `ex-card ${cls}` },
-    h('h3', {}, title), h('p', {}, text),
+    h('h3', {}, title), h('p', {}, text), controls,
     h('button', { class: 'btn', type: 'button', onclick: onStart }, cta));
 }
