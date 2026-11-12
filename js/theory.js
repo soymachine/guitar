@@ -147,53 +147,102 @@ export function diatonicChords(tonic, scaleId) {
 }
 export const QUALITY_NAME = { maj: 'mayor', min: 'menor', dim: 'disminuido', aug: 'aumentado' };
 
-// Acordes sueltos: tríada mayor/menor, con séptima (♭7) y/o quinta disminuida (♭5) opcionales
-// seventh: false (sin séptima) | true (séptima menor, "7") | 'maj7' (séptima mayor)
-export function chordSuffix({ minor, seventh, flat5 }) {
-  const sev = seventh === 'maj7' ? (minor ? '(maj7)' : 'maj7') : seventh ? '7' : '';
-  return (minor ? 'm' : '') + sev + (flat5 ? '♭5' : '');
+// ---------- Acordes y su escala ----------
+// tones: [grado, semitonos]. scale: escala que se construye a partir de ese acorde.
+const SC = {
+  major: ['mayor', [0, 2, 4, 5, 7, 9, 11]],
+  mixo: ['mixolidia', [0, 2, 4, 5, 7, 9, 10]],
+  minor: ['menor natural', [0, 2, 3, 5, 7, 8, 10]],
+  dorian: ['dórica', [0, 2, 3, 5, 7, 9, 10]],
+  harmonic: ['menor armónica', [0, 2, 3, 5, 7, 8, 11]],
+  locrian: ['locria', [0, 1, 3, 5, 6, 8, 10]],
+  majAug: ['mayor ♯5', [0, 2, 4, 5, 8, 9, 11]],
+};
+export const CHORD_TYPES = {
+  M: { label: 'M · mayor', suffix: '', tones: [[1, 0], [3, 4], [5, 7]], scale: 'major' },
+  m: { label: 'm · menor', suffix: 'm', tones: [[1, 0], [3, 3], [5, 7]], scale: 'minor' },
+  aug: { label: 'aug · aumentado', suffix: 'aug', tones: [[1, 0], [3, 4], [5, 8]], scale: 'majAug' },
+  dim: { label: 'dim · disminuido', suffix: 'dim', tones: [[1, 0], [3, 3], [5, 6]], scale: 'locrian' },
+  sus2: { label: 'sus2', suffix: 'sus2', tones: [[1, 0], [2, 2], [5, 7]], scale: 'major' },
+  sus4: { label: 'sus4', suffix: 'sus4', tones: [[1, 0], [4, 5], [5, 7]], scale: 'major' },
+  6: { label: '6', suffix: '6', tones: [[1, 0], [3, 4], [5, 7], [6, 9]], scale: 'major' },
+  m6: { label: 'm6', suffix: 'm6', tones: [[1, 0], [3, 3], [5, 7], [6, 9]], scale: 'dorian' },
+  7: { label: '7', suffix: '7', tones: [[1, 0], [3, 4], [5, 7], [7, 10]], scale: 'mixo', sev: true },
+  maj7: { label: '7M · maj7', suffix: 'maj7', tones: [[1, 0], [3, 4], [5, 7], [7, 11]], scale: 'major', sev: true },
+  m7: { label: 'm7', suffix: 'm7', tones: [[1, 0], [3, 3], [5, 7], [7, 10]], scale: 'minor', sev: true },
+  m7M: { label: 'm7M · m(maj7)', suffix: 'm(maj7)', tones: [[1, 0], [3, 3], [5, 7], [7, 11]], scale: 'harmonic', sev: true },
+  m7b5: { label: 'm7♭5', suffix: 'm7♭5', tones: [[1, 0], [3, 3], [5, 6], [7, 10]], scale: 'locrian', sev: true },
+};
+export const CHORD_TYPE_ORDER = ['M', 'm', 'aug', 'dim', 'sus2', 'sus4', '6', 'm6', '7', 'maj7', 'm7', 'm7M', 'm7b5'];
+const ROLE = {
+  '1:0': 'fundamental', '2:2': '2ª mayor', '3:3': '3ª menor', '3:4': '3ª mayor', '4:5': '4ª justa',
+  '5:6': '5ª disminuida', '5:7': '5ª justa', '5:8': '5ª aumentada', '6:9': '6ª mayor', '7:10': '7ª menor', '7:11': '7ª mayor',
+};
+const degLabelOf = (deg, semis) => { const d = semis - MAJOR_REF[deg]; return (d < 0 ? '♭' : d > 0 ? '♯' : '') + deg; };
+
+// Tipo + alteración de la 5ª que en realidad son otro tipo (m con ♭5 = dim, aug con ♭5 = M con ♭5…)
+const SAME_AS = {
+  'M:1': ['aug', 0], 'm:-1': ['dim', 0], 'm7:-1': ['m7b5', 0],
+  'aug:1': ['aug', 0], 'dim:-1': ['dim', 0], 'm7b5:-1': ['m7b5', 0],
+  'aug:-1': ['M', -1], 'dim:1': ['m', 1], 'm7b5:1': ['m7', 1],
+};
+function canon({ type, fifth = 0 }) {
+  const hit = SAME_AS[`${type}:${fifth}`];
+  return hit ? { type: hit[0], fifth: hit[1] } : { type, fifth };
 }
-export function chordName(root, { minor, seventh, flat5 }) {
-  return noteName(root) + chordSuffix({ minor, seventh, flat5 });
+/** Tonos del acorde tras aplicar la alteración de la 5ª (fifth: -1 ♭5, 0, 1 ♯5) */
+function chordTones(opts) {
+  const { type, fifth } = canon(opts);
+  return CHORD_TYPES[type].tones.map(([deg, semis]) => (deg === 5 && fifth ? [5, 7 + fifth] : [deg, semis]));
 }
-/** Devuelve [{note, semis, degLabel, role}] apilando terceras desde la fundamental */
-export function spellChord(root, { minor, seventh, flat5 }) {
-  const tones = [
-    [0, 0, '1', 'fundamental'],
-    [2, minor ? 3 : 4, minor ? '♭3' : '3', minor ? '3ª menor' : '3ª mayor'],
-    [4, flat5 ? 6 : 7, flat5 ? '♭5' : '5', flat5 ? '5ª disminuida' : '5ª justa'],
-  ];
-  if (seventh === 'maj7') tones.push([6, 11, '7', '7ª mayor']);
-  else if (seventh) tones.push([6, 10, '♭7', '7ª menor']);
+/** opts: { type, fifth } */
+export function chordSuffix(opts) {
+  const base = CHORD_TYPES[canon(opts).type];
+  const baseFifth = base.tones.find((x) => x[0] === 5)[1];
+  const fifth = chordTones(opts).find((x) => x[0] === 5)[1];
+  return base.suffix + (fifth !== baseFifth ? (fifth === 6 ? '♭5' : '♯5') : '');
+}
+export const chordName = (root, opts) => noteName(root) + chordSuffix(opts);
+/** Devuelve [{note, semis, deg, degLabel, role}] */
+export function spellChord(root, opts) {
   const rpc = pcOf(root);
-  return tones.map(([dl, semis, degLabel, role]) => {
-    const l = mod(root.l + dl, 7);
-    return { note: N(l, normAcc(rpc + semis - LETTER_PC[l])), semis, degLabel, role };
+  return chordTones(opts).map(([deg, semis]) => {
+    const l = mod(root.l + deg - 1, 7);
+    return { note: N(l, normAcc(rpc + semis - LETTER_PC[l])), semis, deg, degLabel: degLabelOf(deg, semis), role: ROLE[`${deg}:${semis}`] };
   });
 }
 
-// Escala que corresponde a un acorde (mismas opciones que spellChord)
-export function chordScale(root, { minor, seventh, flat5 }) {
-  let semis, name;
-  const maj7 = seventh === 'maj7';
-  if (minor) {
-    // La menor natural ya lleva ♭7. Con maj7 hace falta la sensible: menor armónica.
-    // Con ♭5 (y sin maj7) es la locria, la del acorde m7♭5.
-    if (maj7) { semis = [0, 2, 3, 5, flat5 ? 6 : 7, 8, 11]; name = 'menor armónica' + (flat5 ? ' ♭5' : ''); }
-    else if (flat5) { semis = [0, 1, 3, 5, 6, 8, 10]; name = 'locria'; }
-    else { semis = [0, 2, 3, 5, 7, 8, 10]; name = 'menor natural'; }
-  } else {
-    const dom = seventh && !maj7;
-    semis = [0, 2, 4, 5, flat5 ? 6 : 7, 9, dom ? 10 : 11];
-    name = (dom ? 'mixolidia' : 'mayor') + (flat5 ? ' ♭5' : '');
-  }
+// Tipos de acorde diatónico reconocibles: "3ª,5ª[,7ª]" en semitonos -> sufijo
+const TRIADS = { '4,7': '', '3,7': 'm', '3,6': 'dim', '4,8': 'aug' };
+const SEVENTHS = { '4,7,11': 'maj7', '4,7,10': '7', '3,7,10': 'm7', '3,6,10': 'm7♭5', '3,7,11': 'm(maj7)', '3,6,9': 'dim7', '4,8,11': 'maj7♯5' };
+export const DEGREE_TYPES = {
+  triads: [['', 'M'], ['m', 'm'], ['dim', 'dim'], ['aug', 'aug']],
+  sevenths: [['maj7', 'maj7'], ['7', '7'], ['m7', 'm7'], ['m7♭5', 'm7♭5'], ['m(maj7)', 'm(maj7)'], ['dim7', 'dim7'], ['maj7♯5', 'maj7♯5']],
+};
+
+/**
+ * Escala que corresponde a un acorde.
+ * Devuelve { name, tones:[{note, semis, deg, degLabel, chord}], pattern, sevenths, harmonized }
+ * chord: sufijo del acorde diatónico de ese grado (tríada o cuatríada), o null si la escala no se armoniza limpio.
+ */
+export function chordScale(root, opts) {
+  const base = CHORD_TYPES[canon(opts).type];
+  let [name, semis] = SC[base.scale];
+  semis = [...semis];
+  const fifth = chordTones(opts).find((x) => x[0] === 5)[1];
+  if (fifth !== semis[4]) { semis[4] = fifth; name += fifth === 6 ? ' ♭5' : ' ♯5'; }
   const rpc = pcOf(root);
+  const sevenths = !!base.sev;
+  const table = sevenths ? SEVENTHS : TRIADS;
   const tones = semis.map((sm, i) => {
-    const l = mod(root.l + i, 7), diff = sm - MAJOR_REF[i + 1];
-    return { note: N(l, normAcc(rpc + sm - LETTER_PC[l])), semis: sm, deg: i + 1, degLabel: (diff < 0 ? '♭' : diff > 0 ? '♯' : '') + (i + 1) };
+    const l = mod(root.l + i, 7);
+    const up = (k) => mod(semis[(i + k) % 7] - sm, 12);
+    const key = sevenths ? `${up(2)},${up(4)},${up(6)}` : `${up(2)},${up(4)}`;
+    return { note: N(l, normAcc(rpc + sm - LETTER_PC[l])), semis: sm, deg: i + 1, degLabel: degLabelOf(i + 1, sm), chord: table[key] };
   });
+  const harmonized = tones.every((d) => d.chord !== undefined);
   const pattern = semis.concat(12).slice(1).map((v, i) => v - semis[i]);
-  return { name, tones, pattern };
+  return { name, tones, pattern, sevenths, harmonized };
 }
 
 // Las 12 posiciones del círculo de quintas (quintas de la armadura)
