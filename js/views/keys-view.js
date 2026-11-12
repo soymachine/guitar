@@ -5,7 +5,7 @@ import { createFretboard } from '../fretboard.js';
 import { createStaff } from '../staff.js';
 import { playMidi, playChord, playSequence } from '../audio.js';
 import { runSession } from '../quiz.js';
-import { keysQuestion, chordQuestion, KEY_TYPES, micOff } from '../questions.js';
+import { keysQuestion, chordQuestion, chordScaleQuestion, KEY_TYPES, micOff } from '../questions.js';
 import { tabs, exerciseCard } from './shared.js';
 
 // ----- Círculo de quintas -----
@@ -185,64 +185,60 @@ function practice(host, rerender) {
   const go = (title, types) => () => runSession(host, {
     title, next: () => keysQuestion({ ...opts, types }), onExit: rerender, onCleanup: micOff,
   });
-  // "Construye la escala" tiene sus propios ajustes: modo y tónica
-  const build = { minor: store.pref('keys.build.minor', false), tonic: store.pref('keys.build.tonic', 'rand') };
-  const tonicSel = h('select', {
-    class: 'select', 'aria-label': 'Tónica',
-    onchange: (ev) => { build.tonic = ev.target.value === 'rand' ? 'rand' : Number(ev.target.value); store.setPref('keys.build.tonic', build.tonic); },
-  });
-  function fillTonics() {
-    const order = [0, 1, 2, 3, 4, 5, 6, 7, -1, -2, -3, -4, -5, -6, -7];
-    tonicSel.replaceChildren(
-      h('option', { value: 'rand', selected: build.tonic === 'rand' }, 'Aleatoria (según dificultad)'),
-      ...order.map((f) => h('option', { value: f, selected: build.tonic === f }, `${T.noteName(T.keyTonic(f, build.minor))} · ${T.sigShort(f)}`)));
+  // Selector compartido: nota, ♯/♭, mayor/menor, séptima y ♭5
+  function chordPicker(prefix, describe) {
+    const st = {
+      letter: store.pref(`${prefix}.letter`, prefix === 'scale' ? 'rand' : 0), acc: store.pref(`${prefix}.acc`, 0),
+      minor: store.pref(`${prefix}.minor`, false), seventh: store.pref(`${prefix}.seventh`, false), flat5: store.pref(`${prefix}.flat5`, false),
+    };
+    const preview = h('div', { class: 'chord-preview', 'aria-live': 'polite' });
+    const accSeg = segmented([{ value: -1, label: '♭' }, { value: 0, label: '♮' }, { value: 1, label: '♯' }], st.acc, (v) => set('acc')(v), { label: 'Alteración' });
+    function draw() {
+      const rnd = st.letter === 'rand';
+      preview.textContent = describe(rnd ? null : T.N(st.letter, st.acc), st);
+      accSeg.classList.toggle('disabled', rnd);
+    }
+    function set(k) { return (v) => { st[k] = v; store.setPref(`${prefix}.${k}`, v); draw(); }; }
+    const el = h('div', { class: 'ex-controls' },
+      field('Nota', h('select', {
+        class: 'select', 'aria-label': 'Nota inicial',
+        onchange: (ev) => set('letter')(ev.target.value === 'rand' ? 'rand' : Number(ev.target.value)),
+      },
+        [0, 1, 2, 3, 4, 5, 6].map((l) => h('option', { value: l, selected: st.letter === l }, T.letterName(l))),
+        h('option', { value: 'rand', selected: st.letter === 'rand' }, 'Aleatoria'))),
+      field('♯ / ♭', accSeg),
+      field('Tipo', segmented([{ value: false, label: 'Mayor' }, { value: true, label: 'Menor' }], st.minor, set('minor'))),
+      field('Séptima', segmented([{ value: false, label: 'No' }, { value: true, label: '7' }], st.seventh, set('seventh'))),
+      field('Quinta', segmented([{ value: false, label: 'Justa' }, { value: true, label: '♭5' }], st.flat5, set('flat5'))),
+      field(prefix === 'scale' ? 'Tu escala' : 'Tu acorde', preview));
+    draw();
+    return { el, st, root: () => (st.letter === 'rand' ? null : T.N(st.letter, st.acc)) };
   }
-  fillTonics();
-  const buildControls = h('div', { class: 'ex-controls' },
-    field('Tonalidad', segmented([{ value: false, label: 'Mayor' }, { value: true, label: 'Menor' }], build.minor,
-      (v) => { build.minor = v; store.setPref('keys.build.minor', v); fillTonics(); })),
-    field('Nota inicial (tónica)', tonicSel));
+  const suffix = (o) => (o.minor ? 'm' : '') + (o.seventh ? '7' : '') + (o.flat5 ? '♭5' : '');
+
+  const sc = chordPicker('scale', (root, o) => {
+    const name = T.chordScale(T.N(0), o).name;
+    return root ? `${T.chordName(root, o)} → ${T.noteName(root)} ${name}` : `?${suffix(o)} → ${name}`;
+  });
   const startBuild = () => {
-    const fixed = build.tonic === 'rand' ? null : { f: build.tonic, minor: build.minor };
+    const root = sc.root(), o = sc.st;
+    const plain = !o.seventh && !o.flat5;
     runSession(host, {
-      title: `Construye la escala · ${build.minor ? 'menor' : 'mayor'}`,
-      count: fixed ? 1 : 10,
-      next: () => keysQuestion({ ...opts, mode: build.minor ? 'minor' : 'major', types: ['kb'], fixed }),
+      title: 'Construye la escala', count: root ? 1 : 10,
+      // Sin 7 ni ♭5 y con nota aleatoria: tonalidades reales según la dificultad elegida arriba
+      next: () => (!root && plain
+        ? keysQuestion({ ...opts, mode: o.minor ? 'minor' : 'major', types: ['kb'] })
+        : chordScaleQuestion({ root, minor: o.minor, seventh: o.seventh, flat5: o.flat5 })),
       onExit: rerender, onCleanup: micOff,
     });
   };
 
-  // "Construye el acorde": fundamental, alteración, mayor/menor, séptima y ♭5
-  const ch = {
-    letter: store.pref('chord.letter', 0), acc: store.pref('chord.acc', 0),
-    minor: store.pref('chord.minor', false), seventh: store.pref('chord.seventh', false), flat5: store.pref('chord.flat5', false),
-  };
-  const chordPreview = h('div', { class: 'chord-preview', 'aria-live': 'polite' });
-  const setCh = (k) => (v) => { ch[k] = v; store.setPref(`chord.${k}`, v); drawPreview(); };
-  function drawPreview() {
-    const rnd = ch.letter === 'rand';
-    chordPreview.textContent = rnd ? `? ${T.chordName(T.N(0), ch).slice(T.noteName(T.N(0)).length) || 'mayor'}` : T.chordName(T.N(ch.letter, ch.acc), ch);
-    accSeg.classList.toggle('disabled', rnd);
-  }
-  const accSeg = segmented([{ value: -1, label: '♭' }, { value: 0, label: '♮' }, { value: 1, label: '♯' }], ch.acc, setCh('acc'), { label: 'Alteración' });
-  const chordControls = h('div', { class: 'ex-controls' },
-    field('Nota', h('select', {
-      class: 'select', 'aria-label': 'Nota fundamental',
-      onchange: (ev) => setCh('letter')(ev.target.value === 'rand' ? 'rand' : Number(ev.target.value)),
-    },
-      [0, 1, 2, 3, 4, 5, 6].map((l) => h('option', { value: l, selected: ch.letter === l }, T.letterName(l))),
-      h('option', { value: 'rand', selected: ch.letter === 'rand' }, 'Aleatoria'))),
-    field('♯ / ♭', accSeg),
-    field('Tipo', segmented([{ value: false, label: 'Mayor' }, { value: true, label: 'Menor' }], ch.minor, setCh('minor'))),
-    field('Séptima', segmented([{ value: false, label: 'No' }, { value: true, label: '7' }], ch.seventh, setCh('seventh'))),
-    field('Quinta', segmented([{ value: false, label: 'Justa' }, { value: true, label: '♭5' }], ch.flat5, setCh('flat5'))),
-    field('Tu acorde', chordPreview));
-  drawPreview();
+  const chp = chordPicker('chord', (root, o) => (root ? T.chordName(root, o) : `?${suffix(o) || ' mayor'}`));
   const startChord = () => {
-    const root = ch.letter === 'rand' ? null : T.N(ch.letter, ch.acc);
+    const root = chp.root(), o = chp.st;
     runSession(host, {
       title: 'Construye el acorde', count: root ? 1 : 10,
-      next: () => chordQuestion({ root, minor: ch.minor, seventh: ch.seventh, flat5: ch.flat5 }),
+      next: () => chordQuestion({ root, minor: o.minor, seventh: o.seventh, flat5: o.flat5 }),
       onExit: rerender, onCleanup: micOff,
     });
   };
@@ -261,8 +257,8 @@ function practice(host, rerender) {
     h('div', { class: 'ex-grid' },
       exerciseCard('Armaduras', 'Ves la armadura y dices la tonalidad — y al revés.', 'Empezar', go('Armaduras', ['ks', 'kc'])),
       exerciseCard('Relativos', 'Cada mayor tiene una menor que comparte sus notas. ¿Cuál?', 'Empezar', go('Relativos', ['kr'])),
-      exerciseCard('Construye la escala', 'Siete letras en fila. Tú decides cuáles llevan ♯ o ♭. Elige el modo y, si quieres, una nota inicial concreta.', 'Empezar', startBuild, 'wide', buildControls),
-      exerciseCard('Construye el acorde', 'Elige la nota, si lleva ♯ o ♭, mayor o menor, con séptima o sin ella y con ♭5 o no. Después deletrea sus notas y míralo en el mástil.', 'Empezar', startChord, 'wide', chordControls),
+      exerciseCard('Construye la escala', 'Elige la nota inicial, si lleva ♯ o ♭, mayor o menor, con séptima (7) o sin ella y con ♭5 o no. Después decides la alteración de cada una de las siete letras.', 'Empezar', startBuild, 'wide', sc.el),
+      exerciseCard('Construye el acorde', 'Elige la nota, si lleva ♯ o ♭, mayor o menor, con séptima o sin ella y con ♭5 o no. Después deletrea sus notas y míralo en el mástil.', 'Empezar', startChord, 'wide', chp.el),
       exerciseCard('Acordes de la tonalidad', '¿Qué acorde es el grado V de La mayor? ¿Y el II?', 'Empezar', go('Acordes de la tonalidad', ['kd'])),
       exerciseCard('Mezcla', 'Un poco de todo, insistiendo en lo que más te cuesta.', 'Empezar', go('Tonalidades · mezcla', KEY_TYPES), 'mix')),
   );
