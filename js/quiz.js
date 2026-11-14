@@ -68,7 +68,7 @@ export function runSession(host, opts) {
       if (answered) return;
       answered = true;
       const secs = (performance.now() - startedAt) / 1000;
-      store.record(q.key, ok);
+      store.record(q.key, ok, !!q.assisted);
       results.push({ ok, secs, explain });
       pips.children[index].className = ok ? 'ok' : 'ko';
       blip(ok);
@@ -79,7 +79,8 @@ export function runSession(host, opts) {
       feedback.append(
         h('div', { class: 'fb-text' },
           h('strong', {}, ok ? '¡Bien!' : 'No del todo.'), ' ',
-          h('span', { html: explain || '' })),
+          h('span', { html: explain || '' }),
+          q.assisted ? h('span', { class: 'q-hint' }, 'Con pista: esta respuesta no suma a tu dominio de la nota.') : null),
         h('button', { class: 'btn', type: 'button', onclick: go }, index + 1 >= count ? 'Ver resumen' : 'Siguiente →'));
       if (ok && !q.hold) timer = setTimeout(go, 1300); // hold: deja la respuesta en pantalla
     });
