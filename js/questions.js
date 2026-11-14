@@ -6,6 +6,7 @@ import { createFretboard } from './fretboard.js';
 import { createStaff } from './staff.js';
 import { listen } from './pitch.js';
 import { playMidi } from './audio.js';
+import { ANCHOR_STEPS, pathFrom, makePhrase, intervalLabel, stepName } from './reading.js';
 
 // ---------- Micrófono compartido durante la sesión ----------
 let micStop = null, micHandler = null, micStarting = null;
@@ -149,7 +150,10 @@ export function fbFind(opts) {
 
 // ---------- Lectura ----------
 const READ_MAX = { 1: 39, 2: 44, 3: 44 }; // 1: primera posición (hasta Sol de la 1ª, traste 3)
-const readSteps = (level) => Array.from({ length: READ_MAX[level] - 23 + 1 }, (_, i) => 23 + i);
+/** Pasos del pentagrama que se practican en cada nivel. Nivel 0: solo las anclas de la primera posición. */
+export const readSteps = (level) => (level === 0
+  ? ANCHOR_STEPS.filter((s) => s <= READ_MAX[1])
+  : Array.from({ length: READ_MAX[level] - 23 + 1 }, (_, i) => 23 + i));
 export const READ_UNIVERSE = [...readSteps(2).map((s) => `rd:${s}`), ...readSteps(2).map((s) => `rf:${s}`)];
 
 export function readName({ level }) {
@@ -161,6 +165,7 @@ export function readName({ level }) {
   const { midi } = T.stepToNote(step, a);
   const note = T.N(l, a);
   const key = withSig ? `rk:${fifths}:${l}` : `rd:${step}`;
+  const path = pathFrom(step);
   const opt = (ll, aa) => ({ value: `${ll}:${aa}`, label: T.noteName(T.N(ll, aa)), cls: aa ? 'black' : '' });
   const order = [0, 1, 2, 3, 4, 5, 6];
   const options = order.map((ll) => opt(ll, 0));
@@ -174,18 +179,113 @@ export function readName({ level }) {
     const pos = T.positionsOfMidi(midi).sort((x, y) => x.f - y.f)[0];
     explain += ` En la guitarra: ${posText(pos.s, pos.f)}.`;
   }
-  return {
+  explain += ` <span class="q-hint">Truco: ${path.text}</span>`;
+  const q = {
     key, midi,
     prompt: withSig ? '¿Qué nota es? <span class="q-hint">ojo con la armadura</span>' : '¿Qué nota es?',
     mount(body, answer) {
       const staff = createStaff({ keySig: fifths, notes: [{ step, cls: 'target' }], minWidth: 230 });
       body.append(h('div', { class: 'paper' }, staff.el));
+      const hintBox = h('span', { class: 'hint-text', 'aria-live': 'polite' });
+      const hintBtn = h('button', {
+        type: 'button', class: 'btn-ghost',
+        onclick: () => {
+          q.assisted = true;
+          hintBtn.disabled = true;
+          // Enseña el ancla más cercana junto a la nota y la cuenta de pasos
+          staff.update({
+            notes: path.delta === 0
+              ? [{ step, cls: 'anchor', label: path.anchorName }]
+              : [{ step: path.anchor.step, cls: 'anchor', label: path.anchorName }, { step, cls: 'target' }],
+          });
+          hintBox.textContent = path.delta === 0 ? `Es un ancla: ${path.where}.` : path.text;
+        },
+      }, '💡 Pista: ancla más cercana');
       choiceGrid(body, options, `${l}:${a}`, (ok, ex) => {
+        hintBtn.disabled = true;
         staff.update({ notes: [{ step, cls: ok ? 'ok' : 'ko', label: T.noteName(note) }] });
         answer(ok, ex);
       }, explain, 'notes7');
+      body.append(h('div', { class: 'hint-row' }, hintBtn, hintBox));
     },
   };
+  return q;
+}
+
+/** Dos notas en el pentagrama: la primera te la doy (un ancla); tú dices la segunda contando pasos. */
+export function readFromAnchor({ level }) {
+  const lv = Math.max(1, Math.min(level, 2));
+  const pool = readSteps(lv).filter((s) => pathFrom(s).delta !== 0);
+  const step = Number(pickKey(pool.map((s) => `rd:${s}`)).split(':')[1]);
+  const path = pathFrom(step);
+  const name = stepName(step);
+  const { midi } = T.stepToNote(step, 0);
+  const l = T.mod(step, 7);
+  const options = [0, 1, 2, 3, 4, 5, 6].map((ll) => ({ value: ll, label: T.letterName(ll) }));
+  return {
+    key: `rd:${step}`, midi,
+    prompt: `La primera nota es ${b(path.anchorName)} <span class="q-hint">cuenta los pasos hasta la segunda: ¿cuál es?</span>`,
+    mount(body, answer) {
+      const staff = createStaff({
+        notes: [{ step: path.anchor.step, cls: 'anchor', label: path.anchorName }, { step, cls: 'target' }],
+        minWidth: 230, spacing: 56,
+      });
+      body.append(h('div', { class: 'paper' }, staff.el));
+      choiceGrid(body, options, l, (ok, ex) => {
+        staff.update({ notes: [{ step: path.anchor.step, cls: 'anchor', label: path.anchorName }, { step, cls: ok ? 'ok' : 'ko', label: name }] });
+        answer(ok, ex);
+      }, `${b(name)}. ${path.text}`, 'notes7');
+    },
+  };
+}
+
+/** Frase de 4 notas: la primera es un ancla; las demás se leen como saltos y se tocan en el mástil. */
+export function readPhrase({ level }) {
+  const steps = makePhrase({ len: 4, lo: 26, hi: level >= 2 ? 44 : 39, thirds: level >= 1 });
+  const notes = steps.map((s) => T.stepToNote(s, 0));
+  const names = steps.map(stepName);
+  const ivs = steps.map((s, i) => (i ? intervalLabel(steps[i - 1], s) : ''));
+  const explain = `${names.map((n, i) => (i ? `${ivs[i]} → ${b(n)}` : b(n))).join(' · ')}.`;
+  const q = {
+    key: 'rp:phrase', midi: null, hold: true,
+    prompt: `Toca la frase: empieza en ${b(names[0])} <span class="q-hint">lee cada salto y pulsa la posición en el mástil</span>`,
+    mount(body, answer) {
+      let idx = 1, mistakes = 0, done = false, hinted = false;
+      const staff = createStaff({ notes: [], minWidth: 240, spacing: 52 });
+      const draw = () => staff.update({
+        notes: steps.map((s, i) => ({
+          step: s,
+          cls: i === 0 ? 'anchor' : i < idx ? 'ok' : i === idx && !done ? 'target' : '',
+          label: i === 0 || i < idx ? names[i] : hinted ? ivs[i] : '',
+        })),
+      });
+      const fb = createFretboard({
+        onPick: (s, f) => {
+          if (done) return;
+          const m = T.midiAt(s, f);
+          playMidi(m);
+          if (m === notes[idx].midi) {
+            fb.add({ s, f, label: names[idx], cls: 'ok' });
+            idx++;
+            if (idx >= steps.length) { done = true; hintBtn.disabled = true; draw(); answer(mistakes === 0, explain + (mistakes ? ` Fallos: ${mistakes}.` : '')); return; }
+          } else {
+            mistakes++;
+            const bad = fb.add({ s, f, label: T.pcName(m % 12), cls: 'ko' });
+            setTimeout(() => bad.remove(), 700);
+          }
+          draw();
+        },
+      });
+      T.positionsOfMidi(notes[0].midi).forEach((p) => fb.add({ ...p, label: names[0], cls: 'root' }));
+      const hintBtn = h('button', {
+        type: 'button', class: 'btn-ghost',
+        onclick: () => { q.assisted = true; hinted = true; hintBtn.disabled = true; draw(); },
+      }, '💡 Pista: ver los saltos');
+      draw();
+      body.append(h('div', { class: 'paper' }, staff.el), fbWrap(fb), h('div', { class: 'hint-row' }, hintBtn));
+    },
+  };
+  return q;
 }
 
 export function readFind({ level, mic }) {

@@ -6,7 +6,10 @@ import { createStaff } from '../staff.js';
 import { playMidi } from '../audio.js';
 import { listen } from '../pitch.js';
 import { runSession, onLeave } from '../quiz.js';
-import { readName, readFind, micOff } from '../questions.js';
+import { readName, readFind, readFromAnchor, readPhrase, micOff } from '../questions.js';
+import { placeText } from '../reading.js';
+import { runSprint, sprintBest } from '../sprint.js';
+import { tricksTab } from './tricks.js';
 import { tabs, exerciseCard } from './shared.js';
 
 const LOW = 40, HIGH = 76;
@@ -42,13 +45,9 @@ function explorer(host) {
     staff.update({ notes: [{ step, acc: spelling.a || undefined, cls: 'ok' }] });
     const pos = T.positionsOfMidi(midi);
     fb.mark(pos.map((p) => ({ ...p, label: T.noteName(spelling), cls: 'root' })));
-    const onLine = T.mod(step, 2) === 0;
-    const where = step < 30 ? 'por debajo del pentagrama, con líneas adicionales'
-      : step > 38 ? 'por encima del pentagrama, con líneas adicionales'
-        : onLine ? `en la ${['1ª', '2ª', '3ª', '4ª', '5ª'][(step - 30) / 2]} línea` : `en el ${['1er', '2º', '3er', '4º'][(step - 31) / 2]} espacio`;
     info.replaceChildren(h('div', { class: 'info-main' },
       h('div', { class: 'info-note' }, T.noteName(spelling)),
-      h('p', {}, `Se escribe ${where}.`),
+      h('p', {}, `Se escribe ${placeText(step)}.`),
       h('p', {}, `En la guitarra: ${pos.map((p) => `${T.STRING_ORD[p.s]} cuerda ${p.f === 0 ? 'al aire' : 'tr. ' + p.f}`).join(' · ')}`)));
   }
   async function toggleMic() {
@@ -95,15 +94,19 @@ function explorer(host) {
 function practice(host, rerender) {
   let level = store.pref('read.level', 1);
   const go = (title, make) => () => runSession(host, { title, next: make, onExit: rerender, onCleanup: micOff });
+  const best = () => sprintBest(Math.min(level, 2));
   host.replaceChildren(
     h('div', { class: 'card' },
       h('p', { class: 'eyebrow' }, 'Ajusta el terreno'),
       h('div', { class: 'toolbar' },
         field('Nivel', segmented([
-          { value: 1, label: 'Primera posición' }, { value: 2, label: 'Hasta el traste 12' }, { value: 3, label: 'Con armadura' },
+          { value: 0, label: 'Solo anclas' }, { value: 1, label: 'Primera posición' }, { value: 2, label: 'Hasta el traste 12' }, { value: 3, label: 'Con armadura' },
         ], level, (v) => { level = v; store.setPref('read.level', v); }))),
-      h('p', { class: 'muted' }, '«Con armadura» solo afecta a «Nombra la nota»: tendrás que aplicar los sostenidos o bemoles de la tonalidad.')),
+      h('p', { class: 'muted' }, '«Solo anclas» practica únicamente las cuerdas al aire y tres notas de referencia: el mejor primer paso. «Con armadura» solo afecta a «Nombra la nota». Si necesitas ayuda, cada pregunta tiene su botón de pista (esas respuestas no suman a tu dominio).')),
     h('div', { class: 'ex-grid' },
+      exerciseCard('Relámpago · 30 s', `Nombra todas las notas que puedas en 30 segundos. Con el teclado (1–7) vas mucho más rápido. ${best() ? `Récord actual: ${best()}.` : ''}`, 'Empezar', () => runSprint(host, { level, onExit: rerender }), 'mix'),
+      exerciseCard('Desde el ancla', 'Te doy una nota conocida y otra al lado. Cuenta los pasos para saber cuál es.', 'Empezar', go('Desde el ancla', () => readFromAnchor({ level }))),
+      exerciseCard('Frases cortas', 'Cuatro notas seguidas en el pentagrama. Lee los saltos y tócalas en el mástil, una tras otra.', 'Empezar', go('Frases cortas', () => readPhrase({ level }))),
       exerciseCard('Nombra la nota', 'Aparece una nota en el pentagrama. Tú dices cuál es.', 'Empezar', go('Lectura · nombra la nota', () => readName({ level }))),
       exerciseCard('Del papel al mástil', 'Lee la nota y púlsala en el diapasón, en la octava correcta.', 'Empezar', go('Del papel al mástil', () => readFind({ level }))),
       exerciseCard('Lee y toca', 'Lee la nota y tócala en tu guitarra: el micrófono comprueba la altura.', 'Usar micrófono', go('Lee y toca', () => readFind({ level, mic: true })), 'mic')),
@@ -115,5 +118,6 @@ export function readingView(view) {
     kicker: '03 · Lectura', title: 'Del pentagrama al mástil',
     lede: 'Leer es reconocer un punto en el papel y saber dónde vive en tu guitarra.',
     prefKey: 'read.tab', explorer, practice,
+    extra: { id: 'tricks', label: 'Trucos', render: tricksTab },
   });
 }

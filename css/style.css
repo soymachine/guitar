@@ -188,6 +188,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .st-note ellipse { fill: var(--ink); }
 .st-stem { stroke: var(--ink); stroke-width: 1.5; }
 .st-label { font: 600 11px var(--body); fill: #7a6248; text-anchor: middle; }
+.st-note.anchor ellipse, .st-note.anchor .st-acc { fill: #2f5f9e; } .st-note.anchor .st-stem { stroke: #2f5f9e; } .st-note.anchor .st-label { fill: #2f5f9e; font-weight: 700; }
 .st-note.target ellipse, .st-note.target .st-acc { fill: #c56a00; } .st-note.target .st-stem { stroke: #c56a00; }
 .st-note.ok ellipse, .st-note.ok .st-acc { fill: #1d7d6b; } .st-note.ok .st-stem { stroke: #1d7d6b; }
 .st-note.ko ellipse, .st-note.ko .st-acc { fill: #c2432b; } .st-note.ko .st-stem { stroke: #c2432b; }
@@ -327,6 +328,33 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .summary-misses .q-hint { display: none; }
 .summary-actions { display: flex; gap: .7rem; margin-top: .6rem; }
 
+/* ---------- Trucos y relámpago ---------- */
+.trick { gap: 1.1rem; }
+.trick-head { display: flex; gap: 1rem; align-items: flex-start; }
+.trick-head h2 { margin-bottom: .35rem; }
+.trick-n { font: italic 500 3.4rem/.85 var(--display); color: var(--amber); opacity: .85; min-width: 2.2rem; }
+.lines-legend { display: grid; gap: .3rem; }
+.lines-legend p { font-size: .95rem; }
+.ladder-gaps { font-size: .93rem; color: var(--muted); }
+.ladder-gaps b { color: var(--cream); font-weight: 600; }
+.ladder-gaps b.semi { color: var(--coral); }
+.routine { margin: 0; padding-left: 1.2rem; display: grid; gap: .5rem; color: var(--muted); }
+.routine b { color: var(--cream); }
+.habits ul { margin: 0; padding-left: 1.1rem; display: grid; gap: .5rem; color: var(--muted); font-size: .95rem; }
+.habits b { color: var(--cream); font-weight: 600; }
+.hint-row { display: flex; align-items: center; gap: .9rem; flex-wrap: wrap; justify-content: center; min-height: 2.4rem; }
+.hint-text { color: var(--blue); font-size: .93rem; max-width: 52ch; }
+.sprint .session-count, .sprint-time { font: 500 1.6rem var(--display); color: var(--amber); min-width: 3ch; text-align: right; }
+.timebar { height: 6px; background: #130e0a; border-radius: 4px; overflow: hidden; }
+.timebar i { display: block; height: 100%; background: linear-gradient(90deg, var(--coral), var(--amber)); transition: width .1s linear; }
+.sprint-score { font: 500 1.1rem var(--display); color: var(--muted); text-align: center; }
+.sprint-stage { display: grid; gap: 1.2rem; justify-items: center; }
+.sprint-stage .paper { width: min(100%, 380px); }
+.sprint-stage .choices { scroll-margin-bottom: 90px; }
+.sprint-flash { min-height: 1.6rem; font: italic 500 1.2rem var(--display); }
+.sprint-flash.ko { color: var(--coral); }
+.choice small { font: 500 .72rem var(--body); opacity: .6; }
+
 /* ---------- Móvil ---------- */
 @media (max-width: 760px) {
   .hero, .keys-top, .read-top { grid-template-columns: 1fr; }
@@ -341,6 +369,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .chord-row { grid-template-columns: repeat(4, 1fr); }
   .build { grid-template-columns: repeat(4, 1fr); }
   .session-title { display: none; }
+  .sprint-stage .paper { width: min(100%, 290px); }
+  .sprint-stage { gap: .8rem; }
   .ex-card.wide { grid-column: auto; }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -32,10 +32,13 @@ export const store = {
   pref(k, fallback) { return k in data.prefs ? data.prefs[k] : fallback; },
   setPref(k, v) { data.prefs[k] = v; save(); },
 
-  record(key, ok) {
-    const it = data.items[key] || (data.items[key] = { ok: 0, ko: 0 });
-    ok ? it.ok++ : it.ko++;
-    it.t = Date.now();
+  /** assisted: con pista; cuenta para la actividad del día pero no para el dominio del elemento */
+  record(key, ok, assisted = false) {
+    if (!assisted) {
+      const it = data.items[key] || (data.items[key] = { ok: 0, ko: 0 });
+      ok ? it.ok++ : it.ko++;
+      it.t = Date.now();
+    }
     const day = data.days[dayKey()] || (data.days[dayKey()] = { n: 0, ok: 0 });
     day.n++; if (ok) day.ok++;
     save();
