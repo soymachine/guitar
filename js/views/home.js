@@ -1,8 +1,10 @@
 import { h, s, segmented } from '../ui.js';
 import { store, dayKey } from '../store.js';
-import { runSession } from '../quiz.js';
 import { mixedQuestion, micOff, FB_UNIVERSE, READ_UNIVERSE, KEYS_UNIVERSE } from '../questions.js';
 import { createFretboard } from '../fretboard.js';
+import { createMicMonitor } from '../micmonitor.js';
+import { micStart } from '../mic.js';
+import { runSession, onLeave } from '../quiz.js';
 
 function ring(value, goal) {
   const r = 52, c = 2 * Math.PI * r, p = Math.min(1, value / goal);
@@ -11,6 +13,26 @@ function ring(value, goal) {
     s('circle', { cx: 65, cy: 65, r, class: 'ring-fg', 'stroke-dasharray': `${c * p} ${c}`, transform: 'rotate(-90 65 65)' }),
     s('text', { x: 65, y: 62, class: 'ring-num' }, value),
     s('text', { x: 65, y: 84, class: 'ring-sub' }, `de ${goal} hoy`));
+}
+
+/** Botón que abre el visor del micrófono para comprobar que funciona, sin hacer ejercicios. */
+function micTest() {
+  const box = h('div', { class: 'mic-test' });
+  const btn = h('button', { class: 'btn-ghost', type: 'button' }, '🎙 Probar micrófono');
+  btn.onclick = () => {
+    if (!box.hasChildNodes()) {
+      const monitor = createMicMonitor();
+      box.append(monitor.el);
+      monitor.start();
+      micStart().catch((err) => monitor.fail(err));
+      btn.textContent = '■ Cerrar prueba';
+    } else {
+      box.replaceChildren();
+      micOff();
+      btn.textContent = '🎙 Probar micrófono';
+    }
+  };
+  return h('div', {}, btn, box);
 }
 
 function areaCard(href, kicker, title, text, mastery) {
@@ -24,7 +46,9 @@ function areaCard(href, kicker, title, text, mastery) {
 }
 
 export function homeView(view) {
+  onLeave(micOff);
   function render() {
+    micOff(); // el visor de prueba (si estaba abierto) se cierra al repintar
     const today = store.today(), streak = store.streak(), totals = store.totals();
     const goal = store.settings.goal;
 
@@ -89,6 +113,8 @@ export function homeView(view) {
           h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Objetivo diario'),
             segmented([10, 20, 40].map((n) => ({ value: n, label: `${n} resp.` })), goal,
               (v) => { store.setSetting('goal', v); render(); })),
+          h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Micrófono'),
+            micTest()),
           h('button', {
             class: 'btn-ghost danger', type: 'button',
             onclick: () => { if (confirm('¿Borrar todo tu progreso? No se puede deshacer.')) { store.reset(); render(); } },

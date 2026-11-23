@@ -4,7 +4,8 @@ import * as T from '../theory.js';
 import { createFretboard } from '../fretboard.js';
 import { createStaff } from '../staff.js';
 import { playMidi } from '../audio.js';
-import { listen } from '../pitch.js';
+import { micStart, micStop, micSubscribe } from '../mic.js';
+import { createMicMonitor } from '../micmonitor.js';
 import { runSession, onLeave } from '../quiz.js';
 import { readName, readFind, readFromAnchor, readPhrase, micOff } from '../questions.js';
 import { placeText } from '../reading.js';
@@ -15,13 +16,15 @@ import { tabs, exerciseCard } from './shared.js';
 const LOW = 40, HIGH = 76;
 
 function explorer(host) {
-  let acc = 0, sel = null, stopMic = null; // sel: { midi, spelling }
+  let acc = 0, sel = null, unsubMic = null; // sel: { midi, spelling }
   const staff = createStaff({ notes: [], minWidth: 260, onPick: (step) => pickStep(step) });
   const fb = createFretboard({
     onPick: (s, f) => { const midi = T.midiAt(s, f); setSel(midi, T.spellPc(midi % 12, acc < 0), true); },
   });
   const info = h('div', { class: 'info-panel' });
   const micBtn = h('button', { class: 'btn-ghost', type: 'button', onclick: toggleMic }, '🎙 Escuchar mi guitarra');
+  const monitor = createMicMonitor();
+  const monitorBox = h('div', { class: 'mic-box-wrap', hidden: true }, monitor.el);
 
   function pickStep(step) {
     let { midi, spelling } = T.stepToNote(step, acc);
@@ -50,19 +53,25 @@ function explorer(host) {
       h('p', {}, `Se escribe ${placeText(step)}.`),
       h('p', {}, `En la guitarra: ${pos.map((p) => `${T.STRING_ORD[p.s]} cuerda ${p.f === 0 ? 'al aire' : 'tr. ' + p.f}`).join(' · ')}`)));
   }
-  async function toggleMic() {
-    if (stopMic) { stopMic(); stopMic = null; micBtn.textContent = '🎙 Escuchar mi guitarra'; micBtn.classList.remove('live'); return; }
-    try {
-      stopMic = await listen((m) => {
-        if (m === null || m < LOW || m > HIGH || (sel && sel.midi === m)) return;
-        setSel(m, T.spellPc(m % 12, acc < 0), false);
-      });
-      micBtn.textContent = '■ Dejar de escuchar'; micBtn.classList.add('live');
-    } catch (err) {
-      info.replaceChildren(h('p', { class: 'muted' }, `No he podido abrir el micrófono (${err.message || err.name}).`));
-    }
+  function stopListening() {
+    unsubMic?.(); unsubMic = null;
+    micStop();
+    monitorBox.hidden = true;
+    micBtn.textContent = '🎙 Escuchar mi guitarra'; micBtn.classList.remove('live');
   }
-  onLeave(() => { stopMic?.(); stopMic = null; });
+  function toggleMic() {
+    if (unsubMic) return stopListening();
+    unsubMic = micSubscribe((f) => {
+      const m = f.note;
+      if (m === null || m < LOW || m > HIGH || (sel && sel.midi === m)) return;
+      setSel(m, T.spellPc(m % 12, acc < 0), false);
+    });
+    monitorBox.hidden = false;
+    monitor.start();
+    micBtn.textContent = '■ Dejar de escuchar'; micBtn.classList.add('live');
+    micStart().catch((err) => monitor.fail(err));
+  }
+  onLeave(stopListening);
 
   const openStaff = createStaff({
     notes: [[23, '6ª'], [26, '5ª'], [29, '4ª'], [32, '3ª'], [34, '2ª'], [37, '1ª']].map(([step, n]) => ({ step, label: `${T.letterName(T.mod(step, 7))} ${n}` })),
@@ -74,6 +83,7 @@ function explorer(host) {
       h('div', { class: 'toolbar' },
         field('Alteración al pulsar', segmented([{ value: -1, label: '♭' }, { value: 0, label: '♮' }, { value: 1, label: '♯' }], acc, (v) => { acc = v; })),
         micBtn),
+      monitorBox,
       h('div', { class: 'read-top' }, h('div', { class: 'paper' }, staff.el), info),
       h('div', { class: 'fb-scroll' }, fb.el)),
     h('div', { class: 'split' },

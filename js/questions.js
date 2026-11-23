@@ -4,52 +4,33 @@ import { store } from './store.js';
 import * as T from './theory.js';
 import { createFretboard } from './fretboard.js';
 import { createStaff } from './staff.js';
-import { listen } from './pitch.js';
+import { micStart, micStop, micSubscribe } from './mic.js';
+import { createMicMonitor } from './micmonitor.js';
 import { playMidi } from './audio.js';
 import { ANCHOR_STEPS, pathFrom, makePhrase, intervalLabel, stepName } from './reading.js';
 
-// ---------- Micrófono compartido durante la sesión ----------
-let micStop = null, micHandler = null, micStarting = null;
-export async function micOn(handler) {
-  micHandler = handler;
-  if (micStop) return;
-  if (!micStarting) {
-    micStarting = listen((m, c) => micHandler?.(m, c))
-      .then((stop) => { micStop = stop; })
-      .finally(() => { micStarting = null; });
-  }
-  return micStarting;
-}
-export function micOff() {
-  micHandler = null;
-  if (micStop) { micStop(); micStop = null; }
-  else if (micStarting) micStarting.then(() => micOff(), () => {});
-}
+// ---------- Micrófono (captura compartida en mic.js) ----------
+export const micOff = micStop;
 
-/** Monta la zona "toca la nota en tu guitarra". */
+/** Monta la zona "toca la nota en tu guitarra", con el visor del micrófono. */
 function micAnswer(body, targetMidi, answer, explain, onResolved) {
-  const heard = h('span', { class: 'mic-heard' }, '…');
-  const status = h('div', { class: 'mic-box' },
-    h('span', { class: 'mic-dot' }), h('span', {}, 'Toca la nota en tu guitarra · suena: '), heard);
+  const monitor = createMicMonitor({ targetMidi });
   const giveUp = h('button', { class: 'btn-ghost', type: 'button', onclick: () => finish(false) }, 'No lo sé');
-  body.append(h('div', { class: 'mic-row' }, status, giveUp));
+  body.append(monitor.el, h('div', { class: 'mic-row' }, h('span', { class: 'muted' }, 'Toca la nota en tu guitarra: se acepta en cuanto suena estable.'), giveUp));
   const t0 = performance.now();
   let done = false;
+  const unsub = micSubscribe((f) => {
+    if (!done && f.note === targetMidi && performance.now() - t0 > 700) finish(true);
+  });
   function finish(ok) {
     if (done) return;
-    done = true; micHandler = null;
-    status.classList.add('off'); giveUp.disabled = true;
+    done = true; unsub();
+    giveUp.disabled = true;
     onResolved?.(ok);
     answer(ok, explain);
   }
-  micOn((m) => {
-    if (done) return;
-    heard.textContent = m === null ? '…' : T.pcLabel(T.mod(m, 12));
-    if (m === targetMidi && performance.now() - t0 > 700) finish(true);
-  }).catch((err) => {
-    status.replaceChildren(h('span', {}, `No he podido abrir el micrófono (${err.message || err.name}). Revisa el permiso del navegador.`));
-    status.classList.add('off');
-  });
+  monitor.start();
+  micStart().catch((err) => monitor.fail(err));
 }
 
 // ---------- Utilidades ----------
