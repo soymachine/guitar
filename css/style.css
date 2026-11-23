@@ -310,11 +310,32 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .build-col.ok { border-color: var(--teal); } .build-col.ok .build-note { color: var(--teal); }
 .build-col.ko { border-color: var(--coral); } .build-col.ko .build-note { color: var(--coral); }
 
+.mic-monitor { width: 100%; max-width: 780px; display: grid; gap: .7rem; background: #130e0a; border: 1px solid var(--line); border-radius: 14px; padding: .9rem 1rem; justify-self: center; min-width: 0; }
+.mic-top { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; }
+.mic-device { color: var(--muted); font-size: .82rem; flex: 1; min-width: 8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mic-pill { display: inline-flex; align-items: center; gap: .45rem; padding: .3rem .8rem; border-radius: 999px; font-size: .85rem; font-weight: 600; background: #2a2018; color: var(--muted); }
+.mic-pill::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.mic-pill.ok { background: rgba(108, 194, 176, .16); color: var(--teal); }
+.mic-pill.ok::before { animation: pulse 1s ease-in-out infinite; }
+.mic-pill.info { background: rgba(134, 182, 234, .14); color: var(--blue); }
+.mic-pill.warn { background: rgba(240, 162, 59, .15); color: var(--amber); }
+.mic-pill.bad { background: rgba(234, 106, 80, .15); color: var(--coral); }
+.mic-canvas { width: 100%; height: 130px; display: block; background: linear-gradient(180deg, #1a130e, #130e0a); border-radius: 10px; }
+.mic-level { display: flex; align-items: center; gap: .7rem; }
+.mic-level-label { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); min-width: 4.8rem; }
+.mic-meter { position: relative; flex: 1; height: 8px; background: #2a2018; border-radius: 4px; }
+.mic-meter i { display: block; height: 100%; max-width: 100%; background: #6e604f; border-radius: 4px; transition: width .06s linear; }
+.mic-meter i.hot { background: var(--teal); }
+.mic-gate { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--amber); }
+.mic-readout { font-size: .88rem; color: var(--muted); min-height: 1.3rem; }
+.mic-help { background: rgba(234, 106, 80, .09); border: 1px solid rgba(234, 106, 80, .35); border-radius: 10px; padding: .7rem 1rem; font-size: .88rem; }
+.mic-help ul { margin: .4rem 0 0; padding-left: 1.1rem; display: grid; gap: .25rem; color: var(--muted); }
+.mic-controls { display: flex; gap: 1rem; flex-wrap: wrap; }
+.mic-controls label { display: grid; gap: .3rem; flex: 1; min-width: 10rem; }
+.mic-controls .select { width: 100%; border-radius: 12px; }
+.mic-box-wrap { display: grid; }
+.mic-test { margin-top: .8rem; }
 .mic-row { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; justify-content: center; }
-.mic-box { display: flex; align-items: center; gap: .6rem; background: #130e0a; border: 1px solid var(--line); border-radius: 999px; padding: .6rem 1.1rem; }
-.mic-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--coral); animation: pulse 1s infinite; }
-.mic-box.off .mic-dot { animation: none; background: var(--muted); }
-.mic-heard { font: 500 1.15rem var(--display); color: var(--amber); min-width: 5ch; }
 
 .summary { display: grid; gap: .8rem; justify-items: center; text-align: center; padding: 1rem 0; width: 100%; }
 .summary-score { font: 400 2rem var(--display); color: var(--muted); }
