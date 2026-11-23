@@ -14,7 +14,7 @@ export const micOff = micStop;
 
 /** Monta la zona "toca la nota en tu guitarra", con el visor del micrófono. */
 function micAnswer(body, targetMidi, answer, explain, onResolved) {
-  const monitor = createMicMonitor({ targetMidi });
+  const monitor = createMicMonitor();
   const giveUp = h('button', { class: 'btn-ghost', type: 'button', onclick: () => finish(false) }, 'No lo sé');
   body.append(monitor.el, h('div', { class: 'mic-row' }, h('span', { class: 'muted' }, 'Toca la nota en tu guitarra: se acepta en cuanto suena estable.'), giveUp));
   const t0 = performance.now();
