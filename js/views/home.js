@@ -89,9 +89,9 @@ export function homeView(view) {
           h('div', { class: 'stat' }, h('b', {}, totals.n ? `${Math.round((totals.ok / totals.n) * 100)}%` : '—'), 'aciertos totales'))),
 
       h('section', { class: 'areas' },
-        areaCard('#/diapason', '01 · Diapasón', 'Cada nota, en cada traste', 'Explora el mástil, nombra posiciones y encuentra notas — con ratón o tocando tu guitarra.', store.areaMastery(FB_UNIVERSE)),
-        areaCard('#/tonalidades', '02 · Tonalidades', 'Escalas mayores y menores', 'Círculo de quintas interactivo, armaduras, relativos y los acordes de cada tonalidad.', store.areaMastery(KEYS_UNIVERSE)),
-        areaCard('#/lectura', '03 · Lectura', 'Del pentagrama al mástil', 'Trucos, ejercicios de velocidad y frases para leer en clave de sol y llevarlo al mástil.', store.areaMastery(READ_UNIVERSE))),
+        areaCard('#diapason', '01 · Diapasón', 'Cada nota, en cada traste', 'Explora el mástil, nombra posiciones y encuentra notas — con ratón o tocando tu guitarra.', store.areaMastery(FB_UNIVERSE)),
+        areaCard('#tonalidades', '02 · Tonalidades', 'Escalas mayores y menores', 'Círculo de quintas interactivo, armaduras, relativos y los acordes de cada tonalidad.', store.areaMastery(KEYS_UNIVERSE)),
+        areaCard('#lectura', '03 · Lectura', 'Del pentagrama al mástil', 'Trucos, ejercicios de velocidad y frases para leer en clave de sol y llevarlo al mástil.', store.areaMastery(READ_UNIVERSE))),
 
       h('section', { class: 'card' },
         h('div', { class: 'card-head' },

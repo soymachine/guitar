@@ -1,7 +1,7 @@
 // Visor del micrófono: espectro en vivo, nivel, nota detectada y diagnóstico de por qué no se oye nada.
 import { h } from './ui.js';
 import * as T from './theory.js';
-import { GATE, midiToFreq, midiLabel, friendlyMicError, listInputs } from './pitch.js';
+import { GATE, midiToFreq, midiLabel, friendlyMicError, listInputs, inClaudeArtifact } from './pitch.js';
 import { micSession, micPrefs, GAINS, setMicGain, setMicDevice } from './mic.js';
 
 const FMIN = 60, FMAX = 1200, LR = Math.log(FMAX / FMIN);
@@ -168,7 +168,8 @@ export function createMicMonitor() {
     }
     setPill(kind, text);
     resumeBtn.hidden = !(sess && f && f.state !== 'running');
-    help.hidden = !(failed || (sess && !everSignal && performance.now() - since > 5000));
+    // Dentro de un artifact los consejos del navegador no sirven: el mensaje de error ya lo explica
+    help.hidden = inClaudeArtifact() || !(failed || (sess && !everSignal && performance.now() - since > 5000));
     if (!help.hidden && !controlsTouched && controls.hidden) setControls(true); // si no llega sonido, ofrece cambiar de micro
 
     // Nivel

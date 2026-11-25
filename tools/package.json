@@ -1,0 +1,12 @@
+{
+  "name": "mastil-tools",
+  "private": true,
+  "type": "module",
+  "description": "Herramientas de desarrollo (no forman parte de la web publicada).",
+  "scripts": {
+    "artifact": "node build-artifact.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10"
+  }
+}

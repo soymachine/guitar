@@ -18,4 +18,14 @@ python3 -m http.server 8000
 
 Para publicarla en GitHub Pages: *Settings → Pages → Deploy from a branch*, rama principal, carpeta `/ (root)`.
 
+## Versión artifact y app de Mac
+
+La web también se publica como *artifact* de Claude (una sola página con todo incrustado) y, desde la app de escritorio de Claude, se instala como app con ventana e icono propios (menú del artifact → *Install as app*, o el botón «Instalar como app» de la barra superior).
+
+```bash
+cd tools && npm install && npm run artifact   # genera dist/artifact/index.html
+```
+
+Dentro de un artifact Claude no concede el micrófono: los ejercicios «con tu guitarra» solo funcionan en la versión web.
+
 Tipografías: Fraunces, Instrument Sans y Noto Music (SIL Open Font License).

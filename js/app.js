@@ -14,7 +14,7 @@ const ROUTES = [
 
 const view = document.getElementById('view');
 const nav = document.getElementById('nav');
-nav.append(...ROUTES.map((r) => h('a', { href: `#/${r.path}`, 'data-path': r.path }, r.label)));
+nav.append(...ROUTES.map((r) => h('a', { href: `#${r.path || 'inicio'}`, 'data-path': r.path }, r.label)));
 
 function route() {
   const path = location.hash.replace(/^#\/?/, '');
@@ -27,7 +27,8 @@ function route() {
   view.className = `view view-${r.path || 'home'}`;
   r.view(view);
   window.scrollTo({ top: 0 });
-  document.title = r.path ? `${r.label} · Mástil` : 'Mástil · teoría para guitarristas';
+  // Dentro de Claude (artifact) el título se queda fijo: de él sale el nombre de la app instalada
+  if (!window.claude?.use) document.title = r.path ? `${r.label} · Mástil` : 'Mástil · teoría para guitarristas';
 }
 window.addEventListener('hashchange', route);
 route();

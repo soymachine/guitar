@@ -55,8 +55,14 @@ export const midiToFreq = (m) => 440 * Math.pow(2, (m - 69) / 12);
 export const midiLabel = (m) => `${['Do', 'Do♯', 'Re', 'Re♯', 'Mi', 'Fa', 'Fa♯', 'Sol', 'Sol♯', 'La', 'La♯', 'Si'][((m % 12) + 12) % 12]}${Math.floor(m / 12) - 1}`;
 
 /** Mensaje comprensible para los errores típicos al abrir el micrófono. */
+/** ¿Estamos dentro de un artifact de Claude? Ahí el navegador del sistema no concede el micrófono. */
+export const inClaudeArtifact = () => !!(window.claude && typeof window.claude.use === 'function');
+
 export function friendlyMicError(err) {
   const name = err?.name || '';
+  if (inClaudeArtifact() && (name === 'NotAllowedError' || name === 'SecurityError')) {
+    return 'Este artifact de Claude no puede usar el micrófono. Para los ejercicios con tu guitarra abre la versión web de Mástil en el navegador.';
+  }
   if (!window.isSecureContext) return 'El navegador solo permite el micrófono en páginas seguras (https).';
   if (name === 'NotAllowedError' || name === 'SecurityError') return 'Permiso denegado. Pulsa el icono del candado junto a la dirección, permite el micrófono para este sitio y recarga.';
   if (name === 'NotFoundError' || name === 'OverconstrainedError') return 'No encuentro ningún micrófono. Conecta uno o elige otro en la lista.';
